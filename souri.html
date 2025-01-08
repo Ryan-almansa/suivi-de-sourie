@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creature with Tentacles</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas></canvas>
+    <script>
+        const canvas = document.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const TAU = Math.PI * 2;
+        const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+        let creature = null;
+
+        // Classe pour chaque tentacule
+        class Tentacle {
+            constructor(x, y, length, color) {
+                this.points = [];
+                this.length = length;
+                this.color = color;
+
+                for (let i = 0; i < length; i++) {
+                    this.points.push({ x, y, angle: 0, speed: Math.random() * 0.1 + 0.1 });
+                }
+            }
+
+            update(targetX, targetY) {
+                let prev = { x: targetX, y: targetY };
+
+                this.points.forEach((point, i) => {
+                    const dx = point.x - prev.x;
+                    const dy = point.y - prev.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx);
+
+                    point.angle += (Math.random() - 0.5) * point.speed;
+                    point.x = prev.x + Math.cos(angle + point.angle) * 20;
+                    point.y = prev.y + Math.sin(angle + point.angle) * 20;
+
+                    prev = { ...point };
+                });
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.points[0].x, this.points[0].y);
+                this.points.forEach((point) => {
+                    ctx.lineTo(point.x, point.y);
+                });
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // Classe pour la créature
+        class Creature {
+            constructor(x, y, tentacleCount) {
+                this.x = x;
+                this.y = y;
+                this.tentacles = [];
+                this.radius = 20;
+
+                for (let i = 0; i < tentacleCount; i++) {
+                    const color = `hsl(${Math.random() * 360}, 100%, 70%)`;
+                    this.tentacles.push(new Tentacle(x, y, 15, color));
+                }
+            }
+
+            update() {
+                // Déplacement de la créature pour suivre la souris
+                this.x += (mouse.x - this.x) * 0.05;
+                this.y += (mouse.y - this.y) * 0.05;
+
+                // Mise à jour des tentacules
+                this.tentacles.forEach((tentacle) => {
+                    tentacle.update(this.x, this.y);
+                });
+            }
+
+            draw() {
+                // Dessiner le "corps" de la créature
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, TAU);
+                ctx.fillStyle = "white";
+                ctx.fill();
+
+                // Dessiner les tentacules
+                this.tentacles.forEach((tentacle) => tentacle.draw());
+            }
+        }
+
+        // Initialiser la créature
+        function setup() {
+            creature = new Creature(canvas.width / 2, canvas.height / 2, 8);
+            animate();
+        }
+
+        // Animation
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            creature.update();
+            creature.draw();
+
+            requestAnimationFrame(animate);
+        }
+
+        // Suivre la souris
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        // Redimensionner le canvas
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        setup();
+    </script>
+</body>
+</html>
