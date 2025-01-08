@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creature with Tentacles</title>
+    <title>Flexible Tentacles</title>
     <style>
         body {
             margin: 0;
-            background-color: black;
+            background: radial-gradient(circle, #0d1b2a, #000000);
             overflow: hidden;
         }
         canvas {
@@ -25,45 +25,54 @@
 
         const TAU = Math.PI * 2;
         const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-        let creature = null;
 
         // Classe pour chaque tentacule
         class Tentacle {
-            constructor(x, y, length, color) {
+            constructor(x, y, segmentCount, segmentLength, color) {
                 this.points = [];
-                this.length = length;
+                this.segmentLength = segmentLength;
                 this.color = color;
 
-                for (let i = 0; i < length; i++) {
-                    this.points.push({ x, y, angle: 0, speed: Math.random() * 0.1 + 0.1 });
+                // Initialisation des segments
+                for (let i = 0; i < segmentCount; i++) {
+                    this.points.push({ x, y, angle: 0 });
                 }
             }
 
-            update(targetX, targetY) {
-                let prev = { x: targetX, y: targetY };
+            follow(targetX, targetY) {
+                // La pointe suit la souris avec douceur
+                const dx = targetX - this.points[0].x;
+                const dy = targetY - this.points[0].y;
+                const angle = Math.atan2(dy, dx);
 
-                this.points.forEach((point, i) => {
-                    const dx = point.x - prev.x;
-                    const dy = point.y - prev.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const angle = Math.atan2(dy, dx);
+                this.points[0].x += Math.cos(angle) * 5;
+                this.points[0].y += Math.sin(angle) * 5;
+                this.points[0].angle = angle;
 
-                    point.angle += (Math.random() - 0.5) * point.speed;
-                    point.x = prev.x + Math.cos(angle + point.angle) * 20;
-                    point.y = prev.y + Math.sin(angle + point.angle) * 20;
-
-                    prev = { ...point };
-                });
+                // Les autres segments suivent le précédent avec des angles harmonieux
+                for (let i = 1; i < this.points.length; i++) {
+                    const prev = this.points[i - 1];
+                    const point = this.points[i];
+                    point.x = prev.x - Math.cos(prev.angle) * this.segmentLength;
+                    point.y = prev.y - Math.sin(prev.angle) * this.segmentLength;
+                    point.angle = Math.atan2(point.y - prev.y, point.x - prev.x);
+                }
             }
 
             draw() {
                 ctx.beginPath();
                 ctx.moveTo(this.points[0].x, this.points[0].y);
-                this.points.forEach((point) => {
+
+                // Dessiner les segments avec des courbes
+                for (let i = 1; i < this.points.length; i++) {
+                    const point = this.points[i];
                     ctx.lineTo(point.x, point.y);
-                });
+                }
+
                 ctx.strokeStyle = this.color;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
                 ctx.stroke();
             }
         }
@@ -74,46 +83,47 @@
                 this.x = x;
                 this.y = y;
                 this.tentacles = [];
-                this.radius = 20;
 
+                // Ajouter les tentacules
                 for (let i = 0; i < tentacleCount; i++) {
+                    const angle = (i / tentacleCount) * TAU; // Répartition en cercle
                     const color = `hsl(${Math.random() * 360}, 100%, 70%)`;
-                    this.tentacles.push(new Tentacle(x, y, 15, color));
+                    const tentacle = new Tentacle(
+                        this.x + Math.cos(angle) * 50,
+                        this.y + Math.sin(angle) * 50,
+                        25, // Nombre de segments (plus pour plus de flexibilité)
+                        50, // Longueur de chaque segment
+                        color
+                    );
+                    this.tentacles.push(tentacle);
                 }
             }
 
             update() {
-                // Déplacement de la créature pour suivre la souris
-                this.x += (mouse.x - this.x) * 0.05;
-                this.y += (mouse.y - this.y) * 0.05;
-
-                // Mise à jour des tentacules
-                this.tentacles.forEach((tentacle) => {
-                    tentacle.update(this.x, this.y);
+                // Mise à jour des tentacules pour suivre la souris
+                this.tentacles.forEach((tentacle, i) => {
+                    const offsetX = Math.cos((i / this.tentacles.length) * TAU) * 50;
+                    const offsetY = Math.sin((i / this.tentacles.length) * TAU) * 50;
+                    tentacle.follow(mouse.x + offsetX, mouse.y + offsetY);
                 });
             }
 
             draw() {
-                // Dessiner le "corps" de la créature
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, TAU);
-                ctx.fillStyle = "white";
-                ctx.fill();
-
-                // Dessiner les tentacules
                 this.tentacles.forEach((tentacle) => tentacle.draw());
             }
         }
 
-        // Initialiser la créature
+        let creature;
+
+        // Initialisation
         function setup() {
-            creature = new Creature(canvas.width / 2, canvas.height / 2, 8);
+            creature = new Creature(canvas.width / 2, canvas.height / 2, 35); // 15 tentacules
             animate();
         }
 
         // Animation
         function animate() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Effet de traînée
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             creature.update();
